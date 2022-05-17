@@ -1,0 +1,159 @@
+---
+title: "lab_12_21122019"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+
+
+```{r}
+df=read.csv("D://R//adult.csv")
+
+head(df)
+
+getmode <- function(v){
+  v=v[nchar(as.character(v))>0]
+  uniqv <- unique(v)
+  uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+
+df[sapply(df, is.character)] <- lapply(df[sapply(df, is.character)], function(x) ifelse(x=="?", getmode(x), x))
+df[sapply(df, is.character)] <- lapply(df[sapply(df, is.character)], as.factor)
+df
+```
+
+```{r}
+library(ggplot2)
+ggplot(df) + aes(x=as.numeric(age), group=income, fill=income) + 
+  geom_histogram(binwidth=1, color='black')
+```
+```{r}
+ggplot(df) + aes(x=as.numeric(age), group=sex, fill=sex) + 
+  geom_histogram(binwidth=1, color='black')
+```
+### It is noticed that majority of the observations make less than $50,000 a year. For those do make over $50,000 annually, they are mainly in midcareer. Interestingly, females are underrepresented. This could be possibly caused by census bias.The variable workclass stands for the industry in which the responding unit is employed.
+
+## age vs income
+```{r}
+library(ggplot2)
+ggplot(df) +
+  aes(x = age, y = income, fill = education) +
+  geom_boxplot() +
+  scale_fill_hue(direction = 1) +
+  labs(x = "age", y = "income", title = "age vs income") +
+  theme_minimal()
+
+```
+## income vs education_num
+```{r}
+ggplot(df) +
+ aes(x = income, y = education.num, fill = education) +
+ geom_col() +
+ scale_fill_hue(direction = 1) +
+ labs(x = "income", y = "education_num", title = " income vs education_num") +
+ theme_minimal()
+```
+## workclass vs hours per week
+
+```{r}
+ggplot(df) +
+ aes(x = workclass, y = hours.per.week, fill = income, colour = income) +
+ geom_jitter(size = 1.5) +
+ scale_fill_hue(direction = 1) +
+ scale_color_hue(direction = 1) +
+ labs(x = "workclass ", y = " hours per week", 
+ title = " workclass vs hours per week") +
+ theme_minimal()
+
+```
+
+
+```{r}
+library("rpart")
+library("rattle")
+library("rpart.plot")
+```
+
+```{r}
+library(caret)
+set.seed(18)
+trainIndex <- createDataPartition(df$income, p = .7, list = F, times = 1)
+Train <- df[ trainIndex,]
+head(Train)
+Test <- df[-trainIndex,]
+```
+
+### decision tree
+```{r}
+my=rpart(
+  income~.,
+  data=Train,
+  method="class"
+)
+my
+rpart.plot(my)
+fancyRpartPlot(my,caption=NULL)
+```
+
+
+```{r}
+library(rpart)
+tree2 <- rpart(income ~ ., data = Train, method = 'class', cp = 1e-3)
+tree2.pred.prob <- predict(tree2, newdata = Test, type = 'prob')
+tree2.pred <- predict(tree2, newdata = Test, type = 'class')
+# confusion matrix 
+tb2 <- table(tree2.pred, Test$income)
+tb2
+```
+
+### here prediction result of CART has an accuracy of 82.94%
+
+```{r}
+library(tidyverse)
+library(randomForest)
+
+```
+
+### randomForest
+```{r}
+library(caret)
+set.seed(18)
+trainIndex <- createDataPartition(df$income, p = .7, list = F, times = 1)
+Train <- df[ trainIndex,]
+head(Train)
+Test <- df[-trainIndex,]
+```
+
+```{r}
+model=randomForest(formula=income ~.,data=Train)
+model
+```
+
+```{r}
+varImpPlot(model)
+```
+
+```{r}
+plot(model)
+```
+```{r}
+ran.pred.prob <- predict(model, newdata = Test, type = 'prob')
+ran.pred <- predict(model, newdata = Test, type = 'class')
+# confusion matrix 
+tb2 <- table(ran.pred, Test$income)
+tb2
+```
+
+
+
+```{r}
+predict=predict(model,newdata=Test)
+actuals_preds <- data.frame(cbind(actuals=Test$income, predicteds=predict)) 
+head(actuals_preds)
+```
+
+### <=50K is taken as 1 and >50K is taken as 2.
+
